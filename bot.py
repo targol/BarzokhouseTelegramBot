@@ -273,12 +273,13 @@ async def finalize_booking(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 # راه‌اندازی ربات
 # ---------------------------------------------------------------------------
 def main() -> None:
-    if config.BOT_TOKEN == "PUT_YOUR_BOT_TOKEN_HERE":
+    token = os.environ.get("BOT_TOKEN", config.BOT_TOKEN)
+    if token == "PUT_YOUR_BOT_TOKEN_HERE":
         raise SystemExit(
-            "لطفاً ابتدا توکن ربات رو در فایل config.py وارد کنید (BOT_TOKEN)."
+            "لطفاً ابتدا توکن ربات رو وارد کنید (در config.py یا متغیر محیطی BOT_TOKEN)."
         )
 
-    application = Application.builder().token(config.BOT_TOKEN).build()
+    application = Application.builder().token(token).build()
 
     booking_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(book_start, pattern=r"^book_")],
@@ -297,8 +298,22 @@ def main() -> None:
     application.add_handler(booking_conv)
     application.add_handler(CallbackQueryHandler(menu_router))
 
-    logger.info("ربات در حال اجراست...")
-    application.run_polling()
+    # اگر متغیر محیطی WEBHOOK_URL تنظیم شده باشه (مثلا موقع دیپلوی روی Render)
+    # ربات با webhook اجرا میشه، در غیر این صورت با polling (مناسب اجرای لوکال روی سیستم خودت)
+    webhook_url = os.environ.get("WEBHOOK_URL") or os.environ.get("RENDER_EXTERNAL_URL")
+    if webhook_url:
+        port = int(os.environ.get("PORT", "10000"))
+        url_path = token  # مسیر مخفی وبهوک؛ حدس زدنش سخته چون خود توکنه
+        logger.info("ربات در حالت webhook روی پورت %s اجرا میشه...", port)
+        application.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            url_path=url_path,
+            webhook_url=f"{webhook_url.rstrip('/')}/{url_path}",
+        )
+    else:
+        logger.info("ربات در حالت polling (اجرای لوکال) در حال اجراست...")
+        application.run_polling()
 
 
 if __name__ == "__main__":
