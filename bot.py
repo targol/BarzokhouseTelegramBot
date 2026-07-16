@@ -14,6 +14,7 @@ import os
 import jdatetime
 
 from telegram import (
+    BotCommand,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     KeyboardButton,
@@ -57,6 +58,68 @@ def to_english_digits(text: str) -> str:
     return "".join(translation.get(ch, ch) for ch in text)
 
 
+WEEKDAY_LABELS_FA = ["ش", "ی", "د", "س", "چ", "پ", "ج"]  # شنبه تا جمعه
+
+
+def jalali_days_in_month(year: int, month: int) -> int:
+    if month <= 6:
+        return 31
+    elif month <= 11:
+        return 30
+    else:
+        return 30 if jdatetime.date(year, 1, 1).isleap() else 29
+
+
+def build_calendar_keyboard(year: int, month: int) -> InlineKeyboardMarkup:
+    today = jdatetime.date.today()
+    rows = []
+
+    # هدر: ماه/سال + دکمه‌های قبلی و بعدی
+    prev_month, prev_year = (month - 1, year) if month > 1 else (12, year - 1)
+    next_month, next_year = (month + 1, year) if month < 12 else (1, year + 1)
+
+    # اگه ماه قبلی کاملاً در گذشته باشه، دکمه‌ی قبلی غیرفعال (خالی) میشه
+    if (year, month) <= (today.year, today.month):
+        prev_button = InlineKeyboardButton(" ", callback_data="ignore")
+    else:
+        prev_button = InlineKeyboardButton("⬅️", callback_data=f"cal_nav_{prev_year}_{prev_month}")
+
+    month_label = f"{jdatetime.date.j_months_fa[month - 1]} {year}"
+    rows.append(
+        [
+            prev_button,
+            InlineKeyboardButton(month_label, callback_data="ignore"),
+            InlineKeyboardButton("➡️", callback_data=f"cal_nav_{next_year}_{next_month}"),
+        ]
+    )
+
+    # هدر روزهای هفته
+    rows.append([InlineKeyboardButton(d, callback_data="ignore") for d in WEEKDAY_LABELS_FA])
+
+    first_weekday = jdatetime.date(year, month, 1).weekday()  # 0=شنبه
+    days_in_month = jalali_days_in_month(year, month)
+
+    day_buttons = [InlineKeyboardButton(" ", callback_data="ignore")] * first_weekday
+    for day in range(1, days_in_month + 1):
+        this_date = jdatetime.date(year, month, day)
+        if this_date < today:
+            day_buttons.append(InlineKeyboardButton(" ", callback_data="ignore"))
+        else:
+            label = f"•{day}" if this_date == today else str(day)
+            day_buttons.append(
+                InlineKeyboardButton(label, callback_data=f"cal_day_{year}_{month}_{day}")
+            )
+
+    # تقسیم روزها به ردیف‌های ۷تایی
+    for i in range(0, len(day_buttons), 7):
+        row = day_buttons[i : i + 7]
+        while len(row) < 7:
+            row.append(InlineKeyboardButton(" ", callback_data="ignore"))
+        rows.append(row)
+
+    return InlineKeyboardMarkup(rows)
+
+
 def parse_checkin_date(raw_text: str):
     """
     تاریخ ورودی کاربر رو پارس می‌کنه (شمسی یا میلادی، با / یا - جدا شده)
@@ -91,13 +154,13 @@ def parse_checkin_date(raw_text: str):
 def main_menu_keyboard() -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton("🛏 اتاق‌ها", callback_data="menu_rooms")],
-        [InlineKeyboardButton("🍽 منوی خوراک و قهوه", callback_data="menu_food")],
+        [InlineKeyboardButton("🍽 منوی غذا", callback_data="menu_food")],
         [InlineKeyboardButton("📜 قوانین و اطلاعات اقامت", callback_data="menu_rules")],
         [InlineKeyboardButton("📍 آدرس", callback_data="menu_address")],
         [InlineKeyboardButton("📞 تماس با ما", callback_data="menu_contact")],
         [InlineKeyboardButton("🌐 شبکه‌های اجتماعی", callback_data="menu_social")],
         [InlineKeyboardButton("💳 پرداخت", callback_data="menu_payment")],
-        [InlineKeyboardButton("⭐ ثبت تجربه شما درباره اقامتگاه", callback_data="menu_review")],
+        [InlineKeyboardButton("⭐ ثبت نظر درباره اقامت شما", callback_data="menu_review")],
     ]
     return InlineKeyboardMarkup(buttons)
 
@@ -350,11 +413,45 @@ async def book_get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return ASK_PHONE
 
     context.user_data["booking_phone"] = phone
+    today = jdatetime.date.today()
     await update.message.reply_text(
-        "ممنون! حالا لطفاً تاریخ ورود خودتون رو وارد کنید (مثلاً ۱۴۰۵/۰۵/۱۰):",
+        "ممنون! حالا لطفاً تاریخ ورود رو از تقویم زیر انتخاب کنید 👇\n"
+        "(یا می‌تونید تایپ هم کنید، مثلاً ۱۴۰۵/۰۵/۱۰)",
         reply_markup=ReplyKeyboardRemove(),
     )
+    await update.message.reply_text(
+        "📅 انتخاب تاریخ ورود:",
+        reply_markup=build_calendar_keyboard(today.year, today.month),
+    )
     return ASK_CHECKIN
+
+
+async def calendar_ignore(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # فقط برای دکمه‌های غیرفعال/تزئینی تقویم (بدون هیچ اکشنی)
+    await update.callback_query.answer()
+
+
+async def calendar_navigate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()
+    _, _, year_str, month_str = query.data.split("_")
+    year, month = int(year_str), int(month_str)
+    await query.edit_message_reply_markup(reply_markup=build_calendar_keyboard(year, month))
+    return ASK_CHECKIN
+
+
+async def calendar_select_day(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()
+    _, _, year_str, month_str, day_str = query.data.split("_")
+    year, month, day = int(year_str), int(month_str), int(day_str)
+
+    checkin_text = f"{year}/{month:02d}/{day:02d}"
+    context.user_data["booking_checkin"] = checkin_text
+
+    await query.edit_message_text(f"📅 تاریخ ورود انتخاب‌شده: {checkin_text}")
+    await query.message.reply_text("تعداد شب‌های اقامت رو وارد کنید (مثلاً 2):")
+    return ASK_NIGHTS
 
 
 async def book_get_checkin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -415,11 +512,12 @@ async def finalize_booking(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     admin_text = (
         "🔔 درخواست رزرو جدید\n\n"
         f"🛏 اتاق: {room_title}\n"
+        f"💰 قیمت: {room_price}\n"
         f"👤 نام: {name}\n"
+        f"📞 شماره تماس: {phone}\n"
         f"📅 تاریخ ورود: {checkin}\n"
         f"🌙 تعداد شب: {nights}\n"
         f"👥 تعداد نفرات: {guests}\n"
-        f"📞 شماره تماس: {phone}\n"
         f"🆔 آیدی تلگرام: @{user.username if user.username else 'ندارد'}"
     )
 
@@ -449,6 +547,17 @@ async def finalize_booking(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 # ---------------------------------------------------------------------------
 # راه‌اندازی ربات
 # ---------------------------------------------------------------------------
+async def post_init(application: Application) -> None:
+    # ثبت دستورات ربات؛ همین کار باعث میشه دکمه‌ی آبی «منو» کنار جعبه‌ی تایپ
+    # توی تلگرام فعال بشه و با زدنش، لیست دستورات (مثل /start) نشون داده بشه.
+    await application.bot.set_my_commands(
+        [
+            BotCommand("start", "🏡 نمایش منوی اصلی"),
+            BotCommand("cancel", "❌ لغو درخواست رزرو در حال انجام"),
+        ]
+    )
+
+
 def main() -> None:
     token = os.environ.get("BOT_TOKEN", config.BOT_TOKEN)
     if token == "PUT_YOUR_BOT_TOKEN_HERE":
@@ -456,7 +565,7 @@ def main() -> None:
             "لطفاً ابتدا توکن ربات رو وارد کنید (در config.py یا متغیر محیطی BOT_TOKEN)."
         )
 
-    application = Application.builder().token(token).build()
+    application = Application.builder().token(token).post_init(post_init).build()
 
     booking_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(book_start, pattern=r"^book_")],
@@ -467,7 +576,12 @@ def main() -> None:
                     (filters.TEXT & ~filters.COMMAND) | filters.CONTACT, book_get_phone
                 )
             ],
-            ASK_CHECKIN: [MessageHandler(filters.TEXT & ~filters.COMMAND, book_get_checkin)],
+            ASK_CHECKIN: [
+                CallbackQueryHandler(calendar_navigate, pattern=r"^cal_nav_"),
+                CallbackQueryHandler(calendar_select_day, pattern=r"^cal_day_"),
+                CallbackQueryHandler(calendar_ignore, pattern=r"^ignore$"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, book_get_checkin),
+            ],
             ASK_NIGHTS: [MessageHandler(filters.TEXT & ~filters.COMMAND, book_get_nights)],
             ASK_GUESTS: [MessageHandler(filters.TEXT & ~filters.COMMAND, book_get_guests)],
         },
