@@ -573,6 +573,9 @@ async def finalize_booking(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         "به‌زودی برای هماهنگی نهایی و تایید رزرو با شما تماس گرفته می‌شود.\n\n"
         f"{config.CONTACT_TEXT}\n\n"
         f"{config.ADDRESS_TEXT}\n\n"
+        # مختصات جغرافیایی روستای برزک (نمونه - می‌تونی دقیق‌تر کنی)
+        LOCATION_LATITUDE = 33.78295691072908 
+        LOCATION_LONGITUDE = 51.229122989614396
         "برای بازگشت به منوی اصلی /start رو بزنید.",
         reply_markup=ReplyKeyboardRemove(),
     )
