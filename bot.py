@@ -357,14 +357,13 @@ async def finalize_booking(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     # پیام برای مدیر اقامتگاه
     admin_text = (
-        "🔔 درخواست رزرو جدید\n\n"
+        "⛔🔔 درخواست رزرو جدید\n\n"
         f"🛏 اتاق: {room_title}\n"
-        f"💰 قیمت: {room_price}\n"
         f"👤 نام: {name}\n"
-        f"📞 شماره تماس: {phone}\n"
         f"📅 تاریخ ورود: {checkin}\n"
         f"🌙 تعداد شب: {nights}\n"
         f"👥 تعداد نفرات: {guests}\n"
+        f"📞 شماره تماس: {phone}\n"
         f"🆔 آیدی تلگرام: @{user.username if user.username else 'ندارد'}"
     )
 
