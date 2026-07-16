@@ -215,6 +215,45 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
+async def cancel_outside_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # این هندلر وقتی اجرا میشه که کاربر /cancel رو بزنه ولی هیچ فرآیند رزروی فعال نباشه
+    await update.message.reply_text(
+        "در حال حاضر هیچ درخواست رزرویی در جریان نیست که لغو بشه.\n"
+        "برای شروع، /start رو بزنید."
+    )
+
+
+async def receive_payment_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """کاربر می‌تونه هر زمان (حتی خارج از فرآیند رزرو) عکس فیش پرداخت رو بفرسته.
+    این عکس مستقیم برای گروه/چت مدیریت فوروارد میشه."""
+    user = update.effective_user
+    try:
+        await context.bot.forward_message(
+            chat_id=config.ADMIN_CHAT_ID,
+            from_chat_id=update.effective_chat.id,
+            message_id=update.message.message_id,
+        )
+        await context.bot.send_message(
+            chat_id=config.ADMIN_CHAT_ID,
+            text=(
+                "☝️ فیش پرداخت بالا از طرف:\n"
+                f"👤 {user.full_name}\n"
+                f"🆔 آیدی تلگرام: @{user.username if user.username else 'ندارد'}"
+            ),
+        )
+    except Exception as exc:
+        logger.error("ارسال فیش پرداخت به مدیر با خطا مواجه شد: %s", exc)
+        await update.message.reply_text(
+            "متاسفانه در ارسال فیش پرداخت مشکلی پیش اومد. لطفاً دوباره امتحان کنید یا از "
+            "طریق «تماس با ما» با ما در ارتباط باشید."
+        )
+        return
+
+    await update.message.reply_text(
+        "✅ فیش پرداخت شما دریافت و برای مدیریت اقامتگاه ارسال شد. ممنون از پرداختتون 🙏"
+    )
+
+
 # ---------------------------------------------------------------------------
 # مدیریت دکمه‌های منوی اصلی (غیر از رزرو)
 # ---------------------------------------------------------------------------
@@ -260,7 +299,9 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             ]
         )
         await query.edit_message_text(
-            "💳 برای پرداخت هزینه‌ی رزرو یا بیعانه، روی دکمه‌ی زیر بزنید تا به درگاه پرداخت منتقل بشید:",
+            "💳 برای پرداخت هزینه‌ی رزرو یا بیعانه، روی دکمه‌ی زیر بزنید تا به درگاه پرداخت منتقل بشید.\n\n"
+            "بعد از پرداخت، می‌تونید عکس فیش/رسید پرداخت رو همینجا برای ما ارسال کنید؛ به‌صورت خودکار "
+            "برای مدیریت اقامتگاه فرستاده میشه. 📎",
             reply_markup=payment_keyboard,
         )
         return
@@ -528,16 +569,11 @@ async def finalize_booking(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     except Exception as exc:
         logger.error("ارسال پیام به مدیر با خطا مواجه شد: %s", exc)
 
-    payment_keyboard = InlineKeyboardMarkup(
-        [[InlineKeyboardButton("💳 پرداخت آنلاین", url=config.PAYMENT_URL)]]
-    )
     await update.message.reply_text(
         "✅ درخواست رزرو شما با موفقیت ثبت و برای مدیریت اقامتگاه ارسال شد.\n"
-        "به‌زودی برای هماهنگی نهایی با شما تماس گرفته می‌شود.\n\n"
-        "در صورت تمایل، می‌تونید از هم‌اکنون هزینه یا بیعانه رو از طریق دکمه‌ی زیر پرداخت کنید:",
-        reply_markup=payment_keyboard,
-    )
-    await update.message.reply_text(
+        "به‌زودی برای هماهنگی نهایی و تایید رزرو با شما تماس گرفته می‌شود.\n\n"
+        f"{config.CONTACT_TEXT}\n\n"
+        f"{config.ADDRESS_TEXT}\n\n"
         "برای بازگشت به منوی اصلی /start رو بزنید.",
         reply_markup=ReplyKeyboardRemove(),
     )
@@ -555,6 +591,18 @@ async def post_init(application: Application) -> None:
             BotCommand("start", "🏡 نمایش منوی اصلی"),
             BotCommand("cancel", "❌ لغو درخواست رزرو در حال انجام"),
         ]
+    )
+
+    # توضیح بات: همین متن قبل از اینکه کاربر /start رو بزنه (توی صفحه‌ی خالی چت)
+    # به‌صورت خودکار توسط خود تلگرام نمایش داده میشه.
+    await application.bot.set_my_description(
+        "🏡 به ربات رزرو اقامتگاه بومگردی «خانه برزک» خوش اومدید!\n\n"
+        "با این ربات می‌تونید اتاق‌های اقامتگاه رو ببینید، اطلاعات آدرس، تماس و قوانین "
+        "اقامت رو بگیرید و درخواست رزرو ثبت کنید.\n\n"
+        "برای شروع، دکمه‌ی Start رو بزنید 👇"
+    )
+    await application.bot.set_my_short_description(
+        "ربات رزرو اقامتگاه بومگردی خانه برزک 🏡"
     )
 
 
@@ -591,6 +639,10 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(booking_conv)
     application.add_handler(CallbackQueryHandler(menu_router))
+    application.add_handler(CommandHandler("cancel", cancel_outside_conversation))
+    application.add_handler(
+        MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE, receive_payment_receipt)
+    )
 
     # اگر متغیر محیطی WEBHOOK_URL تنظیم شده باشه (مثلا موقع دیپلوی روی Render)
     # ربات با webhook اجرا میشه، در غیر این صورت با polling (مناسب اجرای لوکال روی سیستم خودت)
