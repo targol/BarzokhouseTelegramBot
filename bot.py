@@ -40,8 +40,19 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # وضعیت‌های مکالمه‌ی رزرو
 # ---------------------------------------------------------------------------
-ASK_NAME, ASK_PHONE = range(2)
+ASK_NAME, ASK_PHONE, ASK_CHECKIN, ASK_NIGHTS, ASK_GUESTS = range(5)
 
+
+def to_english_digits(text: str) -> str:
+    """تبدیل ارقام فارسی/عربی به انگلیسی، برای اعتبارسنجی راحت‌تر عدد."""
+    persian_digits = "۰۱۲۳۴۵۶۷۸۹"
+    arabic_digits = "٠١٢٣٤٥٦٧٨٩"
+    translation = {}
+    for i, ch in enumerate(persian_digits):
+        translation[ch] = str(i)
+    for i, ch in enumerate(arabic_digits):
+        translation[ch] = str(i)
+    return "".join(translation.get(ch, ch) for ch in text)
 
 # ---------------------------------------------------------------------------
 # کیبوردهای کمکی
@@ -49,6 +60,7 @@ ASK_NAME, ASK_PHONE = range(2)
 def main_menu_keyboard() -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton("🛏 اتاق‌ها", callback_data="menu_rooms")],
+        [InlineKeyboardButton("🍽 منوی غذا", callback_data="menu_food")],
         [InlineKeyboardButton("📜 قوانین و اطلاعات اقامت", callback_data="menu_rules")],
         [InlineKeyboardButton("📍 آدرس", callback_data="menu_address")],
         [InlineKeyboardButton("📞 تماس با ما", callback_data="menu_contact")],
@@ -142,6 +154,15 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if data == "menu_social":
         await query.edit_message_text(
             config.SOCIAL_TEXT, reply_markup=back_to_main_keyboard()
+        )
+        return
+
+    if data == "menu_food":
+        await query.edit_message_text(
+            config.FOOD_MENU_TEXT,
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+            reply_markup=back_to_main_keyboard(),
         )
         return
 
@@ -284,6 +305,42 @@ async def book_get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return ASK_PHONE
 
     context.user_data["booking_phone"] = phone
+    await update.message.reply_text(
+        "ممنون! حالا لطفاً تاریخ ورود خودتون رو وارد کنید (مثلاً ۱۴۰۳/۰۵/۱۰):",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    return ASK_CHECKIN
+
+
+async def book_get_checkin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    checkin_date = update.message.text.strip()
+    if len(checkin_date) < 4:
+        await update.message.reply_text("لطفاً یک تاریخ معتبر وارد کنید (مثلاً ۱۴۰۳/۰۵/۱۰):")
+        return ASK_CHECKIN
+
+    context.user_data["booking_checkin"] = checkin_date
+    await update.message.reply_text("تعداد شب‌های اقامت رو وارد کنید (مثلاً 2):")
+    return ASK_NIGHTS
+
+
+async def book_get_nights(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    nights_raw = to_english_digits(update.message.text.strip())
+    if not nights_raw.isdigit() or int(nights_raw) < 1:
+        await update.message.reply_text("لطفاً تعداد شب رو به‌صورت عدد وارد کنید (مثلاً 2):")
+        return ASK_NIGHTS
+
+    context.user_data["booking_nights"] = nights_raw
+    await update.message.reply_text("تعداد نفرات رو وارد کنید (مثلاً 2):")
+    return ASK_GUESTS
+
+
+async def book_get_guests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    guests_raw = to_english_digits(update.message.text.strip())
+    if not guests_raw.isdigit() or int(guests_raw) < 1:
+        await update.message.reply_text("لطفاً تعداد نفرات رو به‌صورت عدد وارد کنید (مثلاً 2):")
+        return ASK_GUESTS
+
+    context.user_data["booking_guests"] = guests_raw
     await finalize_booking(update, context)
     return ConversationHandler.END
 
@@ -294,6 +351,9 @@ async def finalize_booking(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     room_price = context.user_data.get("booking_room_price")
     name = context.user_data.get("booking_name")
     phone = context.user_data.get("booking_phone")
+    checkin = context.user_data.get("booking_checkin")
+    nights = context.user_data.get("booking_nights")
+    guests = context.user_data.get("booking_guests")
 
     # پیام برای مدیر اقامتگاه
     admin_text = (
@@ -302,13 +362,17 @@ async def finalize_booking(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         f"💰 قیمت: {room_price}\n"
         f"👤 نام: {name}\n"
         f"📞 شماره تماس: {phone}\n"
-        f"🆔 آیدی تلگرام: @{user.username if user.username else 'ندارد'}\n"
-        f"🔢 شناسه عددی کاربر: {user.id}"
-    )
+        f"📅 تاریخ ورود: {checkin}\n"
+        f"🌙 تعداد شب: {nights}\n"
+        f"👥 تعداد نفرات: {guests}\n"
+        f"🆔 آیدی تلگرام: @{user.username if user.username else 'ندارد'}"
+   )
 
     try:
-        await context.bot.send_message(chat_id=config.ADMIN_CHAT_ID, text=admin_text)
-    except Exception as exc:
+        await context.bot.send_message(
+            chat_id=config.ADMIN_CHAT_ID, text=admin_text, parse_mode="HTML"
+        )
+   except Exception as exc:
         logger.error("ارسال پیام به مدیر با خطا مواجه شد: %s", exc)
 
     await update.message.reply_text(
@@ -341,6 +405,9 @@ def main() -> None:
                     (filters.TEXT & ~filters.COMMAND) | filters.CONTACT, book_get_phone
                 )
             ],
+            ASK_CHECKIN: [MessageHandler(filters.TEXT & ~filters.COMMAND, book_get_checkin)],
+            ASK_NIGHTS: [MessageHandler(filters.TEXT & ~filters.COMMAND, book_get_nights)],
+            ASK_GUESTS: [MessageHandler(filters.TEXT & ~filters.COMMAND, book_get_guests)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
