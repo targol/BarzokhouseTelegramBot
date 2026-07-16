@@ -366,13 +366,13 @@ async def finalize_booking(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         f"🌙 تعداد شب: {nights}\n"
         f"👥 تعداد نفرات: {guests}\n"
         f"🆔 آیدی تلگرام: @{user.username if user.username else 'ندارد'}"
-   )
+    )
 
     try:
         await context.bot.send_message(
             chat_id=config.ADMIN_CHAT_ID, text=admin_text, parse_mode="HTML"
         )
-   except Exception as exc:
+    except Exception as exc:
         logger.error("ارسال پیام به مدیر با خطا مواجه شد: %s", exc)
 
     await update.message.reply_text(
