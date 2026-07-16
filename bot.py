@@ -261,13 +261,13 @@ async def book_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def book_get_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     name = update.message.text.strip()
-    if len(name) < 2:
+    if len(name) < 3:
         await update.message.reply_text("لطفاً یک نام معتبر وارد کنید:")
         return ASK_NAME
 
     context.user_data["booking_name"] = name
     await update.message.reply_text(
-        "ممنون! حالا لطفاً شماره تماس خودتون رو وارد کنید یا با دکمه زیر ارسال کنید:",
+        "سپاس! حالا لطفاً شماره تماس خودتون رو وارد کنید یا با دکمه زیر ارسال کنید:",
         reply_markup=phone_request_keyboard(),
     )
     return ASK_PHONE
@@ -279,7 +279,7 @@ async def book_get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     else:
         phone = update.message.text.strip()
 
-    if len(phone) < 6:
+    if len(phone) < 10:
         await update.message.reply_text("لطفاً یک شماره تماس معتبر وارد کنید:")
         return ASK_PHONE
 
