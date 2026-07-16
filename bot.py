@@ -11,6 +11,8 @@
 import logging
 import os
 
+import jdatetime
+
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -54,18 +56,48 @@ def to_english_digits(text: str) -> str:
         translation[ch] = str(i)
     return "".join(translation.get(ch, ch) for ch in text)
 
+
+def parse_checkin_date(raw_text: str):
+    """
+    تاریخ ورودی کاربر رو پارس می‌کنه (شمسی یا میلادی، با / یا - جدا شده)
+    و در صورت معتبر بودن، تاریخ میلادی امروز رو برمی‌گردونه (برای مقایسه).
+    اگه فرمت یا تاریخ نامعتبر بود، None برمی‌گردونه.
+    """
+    text = to_english_digits(raw_text.strip())
+    parts = text.replace("-", "/").split("/")
+    if len(parts) != 3:
+        return None
+    try:
+        year, month, day = int(parts[0]), int(parts[1]), int(parts[2])
+    except ValueError:
+        return None
+
+    try:
+        if year > 1700:
+            # تاریخ میلادی
+            import datetime
+
+            return datetime.date(year, month, day)
+        else:
+            # تاریخ شمسی
+            jdate = jdatetime.date(year, month, day)
+            return jdate.togregorian()
+    except ValueError:
+        return None
+
 # ---------------------------------------------------------------------------
 # کیبوردهای کمکی
 # ---------------------------------------------------------------------------
 def main_menu_keyboard() -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton("🛏 اتاق‌ها", callback_data="menu_rooms")],
-        [InlineKeyboardButton("🍽 منوی غذا", callback_data="menu_food")],
+        [InlineKeyboardButton("🍽 منوی خوراک و قهوه", callback_data="menu_food")],
         [InlineKeyboardButton("📜 قوانین و اطلاعات اقامت", callback_data="menu_rules")],
         [InlineKeyboardButton("📍 آدرس", callback_data="menu_address")],
         [InlineKeyboardButton("📞 تماس با ما", callback_data="menu_contact")],
         [InlineKeyboardButton("🌐 شبکه‌های اجتماعی", callback_data="menu_social")],
-        [InlineKeyboardButton("⭐ ثبت نظر درباره اقامت شما", callback_data="menu_review")],
+        [InlineKeyboardButton("💳 پرداخت", callback_data="menu_payment")],
+        [InlineKeyboardButton("⭐ ثبت تجربه شما درباره اقامتگاه", callback_data="menu_review")],
     ]
     return InlineKeyboardMarkup(buttons)
 
@@ -154,6 +186,19 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if data == "menu_social":
         await query.edit_message_text(
             config.SOCIAL_TEXT, reply_markup=back_to_main_keyboard()
+        )
+        return
+
+    if data == "menu_payment":
+        payment_keyboard = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("💳 پرداخت آنلاین", url=config.PAYMENT_URL)],
+                [InlineKeyboardButton("⬅️ بازگشت به منو", callback_data="back_main")],
+            ]
+        )
+        await query.edit_message_text(
+            "💳 برای پرداخت هزینه‌ی رزرو یا بیعانه، روی دکمه‌ی زیر بزنید تا به درگاه پرداخت منتقل بشید:",
+            reply_markup=payment_keyboard,
         )
         return
 
@@ -306,19 +351,30 @@ async def book_get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     context.user_data["booking_phone"] = phone
     await update.message.reply_text(
-        "ممنون! حالا لطفاً تاریخ ورود خودتون رو وارد کنید (مثلاً ۱۴۰۳/۰۵/۱۰):",
+        "ممنون! حالا لطفاً تاریخ ورود خودتون رو وارد کنید (مثلاً ۱۴۰۵/۰۵/۱۰):",
         reply_markup=ReplyKeyboardRemove(),
     )
     return ASK_CHECKIN
 
 
 async def book_get_checkin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    checkin_date = update.message.text.strip()
-    if len(checkin_date) < 4:
-        await update.message.reply_text("لطفاً یک تاریخ معتبر وارد کنید (مثلاً ۱۴۰۳/۰۵/۱۰):")
+    checkin_date_raw = update.message.text.strip()
+    parsed_date = parse_checkin_date(checkin_date_raw)
+
+    if parsed_date is None:
+        await update.message.reply_text(
+            "فرمت تاریخ نامعتبره. لطفاً به این شکل وارد کنید (مثلاً ۱۴۰۵/۰۵/۱۰):"
+        )
         return ASK_CHECKIN
 
-    context.user_data["booking_checkin"] = checkin_date
+    today = jdatetime.date.today().togregorian()
+    if parsed_date < today:
+        await update.message.reply_text(
+            "تاریخ ورود نمی‌تونه قبل از امروز باشه. لطفاً یک تاریخ درست وارد کنید (مثلاً ۱۴۰۵/۰۵/۱۰):"
+        )
+        return ASK_CHECKIN
+
+    context.user_data["booking_checkin"] = checkin_date_raw
     await update.message.reply_text("تعداد شب‌های اقامت رو وارد کنید (مثلاً 2):")
     return ASK_NIGHTS
 
@@ -357,7 +413,7 @@ async def finalize_booking(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     # پیام برای مدیر اقامتگاه
     admin_text = (
-        "⛔🔔 درخواست رزرو جدید\n\n"
+        "🔔 درخواست رزرو جدید\n\n"
         f"🛏 اتاق: {room_title}\n"
         f"👤 نام: {name}\n"
         f"📅 تاریخ ورود: {checkin}\n"
@@ -374,9 +430,16 @@ async def finalize_booking(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     except Exception as exc:
         logger.error("ارسال پیام به مدیر با خطا مواجه شد: %s", exc)
 
+    payment_keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("💳 پرداخت آنلاین", url=config.PAYMENT_URL)]]
+    )
     await update.message.reply_text(
         "✅ درخواست رزرو شما با موفقیت ثبت و برای مدیریت اقامتگاه ارسال شد.\n"
         "به‌زودی برای هماهنگی نهایی با شما تماس گرفته می‌شود.\n\n"
+        "در صورت تمایل، می‌تونید از هم‌اکنون هزینه یا بیعانه رو از طریق دکمه‌ی زیر پرداخت کنید:",
+        reply_markup=payment_keyboard,
+    )
+    await update.message.reply_text(
         "برای بازگشت به منوی اصلی /start رو بزنید.",
         reply_markup=ReplyKeyboardRemove(),
     )
