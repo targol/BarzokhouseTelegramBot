@@ -155,12 +155,12 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton("🛏 اتاق‌ها", callback_data="menu_rooms")],
         [InlineKeyboardButton("🍽 منوی غذا", callback_data="menu_food")],
-        [InlineKeyboardButton("📜 قوانین و اطلاعات اقامت", callback_data="menu_rules")],
+        [InlineKeyboardButton("📜 اطلاعاتی درباره اقامتگاه", callback_data="menu_rules")],
         [InlineKeyboardButton("📍 آدرس", callback_data="menu_address")],
         [InlineKeyboardButton("📞 تماس با ما", callback_data="menu_contact")],
         [InlineKeyboardButton("🌐 شبکه‌های اجتماعی", callback_data="menu_social")],
         [InlineKeyboardButton("💳 پرداخت", callback_data="menu_payment")],
-        [InlineKeyboardButton("⭐ ثبت نظر درباره اقامت شما", callback_data="menu_review")],
+        [InlineKeyboardButton("⭐ ثبت تجریه شما", callback_data="menu_review")],
     ]
     return InlineKeyboardMarkup(buttons)
 
@@ -299,8 +299,8 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             ]
         )
         await query.edit_message_text(
-            "💳 برای پرداخت هزینه‌ی رزرو یا بیعانه، روی دکمه‌ی زیر بزنید تا به درگاه پرداخت منتقل بشید.\n\n"
-            "بعد از پرداخت، می‌تونید عکس فیش/رسید پرداخت رو همینجا برای ما ارسال کنید؛ به‌صورت خودکار "
+            "💳 برای پرداخت هزینه‌ رزرو یا پیش پرداخت، روی دکمه‌ زیر بزنید تا به درگاه پرداخت منتقل بشید.\n\n"
+            "بعد از پرداخت، می‌تونید عکس رسید پرداخت رو همینجا برای ما ارسال کنید؛ به‌صورت خودکار "
             "برای مدیریت اقامتگاه فرستاده میشه. 📎",
             reply_markup=payment_keyboard,
         )
