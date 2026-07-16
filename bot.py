@@ -49,9 +49,11 @@ ASK_NAME, ASK_PHONE = range(2)
 def main_menu_keyboard() -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton("🛏 اتاق‌ها", callback_data="menu_rooms")],
+        [InlineKeyboardButton("📜 قوانین و اطلاعات اقامت", callback_data="menu_rules")],
         [InlineKeyboardButton("📍 آدرس", callback_data="menu_address")],
         [InlineKeyboardButton("📞 تماس با ما", callback_data="menu_contact")],
         [InlineKeyboardButton("🌐 شبکه‌های اجتماعی", callback_data="menu_social")],
+        [InlineKeyboardButton("⭐ ثبت نظر درباره اقامت شما", callback_data="menu_review")],
     ]
     return InlineKeyboardMarkup(buttons)
 
@@ -140,6 +142,55 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if data == "menu_social":
         await query.edit_message_text(
             config.SOCIAL_TEXT, reply_markup=back_to_main_keyboard()
+        )
+        return
+
+    if data == "menu_rules":
+        # این بخش چند پیام جداگانه می‌فرسته (متن + متن + عکس)، پس پیام قبلی رو حذف می‌کنیم
+        try:
+            await query.message.delete()
+        except Exception:
+            pass
+
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=config.HOUSE_RULES_TEXT,
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+        )
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=config.WEATHER_TEXT,
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+        )
+
+        green_photo_path = config.GREEN_TRIP_PHOTO
+        if green_photo_path and os.path.exists(green_photo_path):
+            with open(green_photo_path, "rb") as photo_file:
+                await context.bot.send_photo(
+                    chat_id=query.message.chat_id,
+                    photo=photo_file,
+                    caption=config.GREEN_TRIP_TEXT,
+                    parse_mode="HTML",
+                    reply_markup=back_to_main_keyboard(),
+                )
+        else:
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=config.GREEN_TRIP_TEXT,
+                parse_mode="HTML",
+                disable_web_page_preview=True,
+                reply_markup=back_to_main_keyboard(),
+            )
+        return
+
+    if data == "menu_review":
+        await query.edit_message_text(
+            config.REVIEW_TEXT,
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+            reply_markup=back_to_main_keyboard(),
         )
         return
 
