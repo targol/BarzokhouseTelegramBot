@@ -607,7 +607,7 @@ async def post_init(application: Application) -> None:
 
 def main() -> None:
     token = os.environ.get("BOT_TOKEN", config.BOT_TOKEN)
-    if token == "PUT_YOUR_BOT_TOKEN_HERE":
+    if token == "-1004485664573":
         raise SystemExit(
             "لطفاً ابتدا توکن ربات رو وارد کنید (در config.py یا متغیر محیطی BOT_TOKEN)."
         )
