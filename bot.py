@@ -333,11 +333,17 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     if data == "menu_food":
+        food_keyboard = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("🍽 مشاهده منوی غذا", url=config.FOOD_MENU_URL)],
+                [InlineKeyboardButton("⬅️ بازگشت به منو", callback_data="back_main")],
+            ]
+        )
         await query.edit_message_text(
             config.FOOD_MENU_TEXT,
             parse_mode="HTML",
             disable_web_page_preview=True,
-            reply_markup=back_to_main_keyboard(),
+            reply_markup=food_keyboard,
         )
         return
 
@@ -348,19 +354,37 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         except Exception:
             pass
 
+        rules_keyboard = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("🏡 آشنایی با خانه برزک", url=config.HOUSE_RULES_SITE_URL)],
+                [InlineKeyboardButton("📋 نکات پیش از اقامت", url=config.HOUSE_RULES_TIPS_URL)],
+            ]
+        )
         await context.bot.send_message(
             chat_id=query.message.chat_id,
             text=config.HOUSE_RULES_TEXT,
             parse_mode="HTML",
             disable_web_page_preview=True,
+            reply_markup=rules_keyboard,
+        )
+
+        weather_keyboard = InlineKeyboardMarkup(
+            [[InlineKeyboardButton("🌤 مشاهده آب‌وهوا", url=config.WEATHER_URL)]]
         )
         await context.bot.send_message(
             chat_id=query.message.chat_id,
             text=config.WEATHER_TEXT,
             parse_mode="HTML",
             disable_web_page_preview=True,
+            reply_markup=weather_keyboard,
         )
 
+        green_trip_keyboard = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("🌿 مشاهده در سایت", url=config.GREEN_TRIP_URL)],
+                [InlineKeyboardButton("⬅️ بازگشت به منو", callback_data="back_main")],
+            ]
+        )
         green_photo_path = config.GREEN_TRIP_PHOTO
         if green_photo_path and os.path.exists(green_photo_path):
             with open(green_photo_path, "rb") as photo_file:
@@ -369,7 +393,7 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                     photo=photo_file,
                     caption=config.GREEN_TRIP_TEXT,
                     parse_mode="HTML",
-                    reply_markup=back_to_main_keyboard(),
+                    reply_markup=green_trip_keyboard,
                 )
         else:
             await context.bot.send_message(
@@ -377,24 +401,42 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 text=config.GREEN_TRIP_TEXT,
                 parse_mode="HTML",
                 disable_web_page_preview=True,
-                reply_markup=back_to_main_keyboard(),
+                reply_markup=green_trip_keyboard,
             )
         return
 
     if data == "menu_review":
+        review_keyboard = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("📍 ثبت نظر در Google Maps", url=config.REVIEW_GOOGLE_MAPS_URL)],
+                [InlineKeyboardButton("✈️ ثبت نظر در TripAdvisor", url=config.REVIEW_TRIPADVISOR_URL)],
+                [InlineKeyboardButton("⬅️ بازگشت به منو", callback_data="back_main")],
+            ]
+        )
         await query.edit_message_text(
             config.REVIEW_TEXT,
             parse_mode="HTML",
             disable_web_page_preview=True,
-            reply_markup=back_to_main_keyboard(),
+            reply_markup=review_keyboard,
         )
         return
 
     if data == "menu_rooms":
-        await query.edit_message_text(
-            "🛏 لیست اتاق‌های اقامتگاه:\nیکی از اتاق‌ها رو برای دیدن جزئیات انتخاب کن 👇",
-            reply_markup=rooms_list_keyboard(),
-        )
+        rooms_text = "🛏 لیست اتاق‌های اقامتگاه:\nیکی از اتاق‌ها رو برای دیدن جزئیات انتخاب کن 👇"
+        # اگه از پیام جزئیات یه اتاق (که عکس داره) اومده باشیم، نمیشه با
+        # edit_message_text ویرایشش کرد؛ پس پیام قبلی رو حذف و پیام جدید می‌فرستیم.
+        if query.message.photo:
+            try:
+                await query.message.delete()
+            except Exception:
+                pass
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=rooms_text,
+                reply_markup=rooms_list_keyboard(),
+            )
+        else:
+            await query.edit_message_text(rooms_text, reply_markup=rooms_list_keyboard())
         return
 
     if data.startswith("room_"):
