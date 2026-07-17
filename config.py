@@ -89,29 +89,24 @@ HOUSE_RULES_TEXT = (
     "برای اینکه اقامت راحت‌تر و لذت‌بخش‌تری داشته باشید، لطفاً پیش از سفر نگاهی به موارد زیر "
     "بیندازید؛ مطالعه آن کمتر از ۳ دقیقه زمان می‌برد.\n\n"
     "🏡 <b>آشنایی با خانه برزک</b>\n"
-    "اطلاعات اتاق‌ها، امکانات، مسیر دسترسی و سایر اطلاعات موردنیاز را در "
-    '<a href="https://arzokhouse.com/%D9%85%D8%B4%D8%A7%D9%87%D8%AF%D9%87-%D8%A7%D8%AA%D8%A7%D9%82-%D9%87%D8%A7">سایت</a> '
-    "مشاهده کنید.\n\n"
+    "اطلاعات اتاق‌ها، امکانات، مسیر دسترسی و سایر اطلاعات موردنیاز را در سایت مشاهده کنید.\n\n"
     "📋 <b>چند نکته پیش از اقامت</b>\n"
-    "برای اینکه همه مهمانان اقامت آرام و دلپذیری داشته باشند، لطفاً "
-    '<a href="https://barzokhouse.com/%d8%b4%d8%b1%d8%a7%db%8c%d8%b7-%d8%ae%d8%a7%d9%86%d9%87-%d9%88-%d9%88%d8%b1%d9%88%d8%af-%d9%85%d9%87%d9%85%d8%a7%d9%86/">'
-    "چند نکته</a> را در طول اقامت در نظر داشته باشید.\n\n"
+    "برای اینکه همه مهمانان اقامت آرام و دلپذیری داشته باشند، لطفاً این نکات رو در طول اقامت "
+    "در نظر داشته باشید.\n\n"
     "اگر پیش از سفر سؤال یا ابهامی داشتید، با کمال میل پاسخگوی شما هستیم.\n"
     "به امید دیدار شما در خانه برزک 🌿"
 )
- 
-WEATHER_TEXT = (
-    "🌤 <b>آب‌وهوا</b>\n\n"
-    "پیش از حرکت، وضعیت آب‌وهوای برزک را بررسی کنید \n"
-    '<a href="https://www.accuweather.com/en/ir/azaran/208117/weather-forecast/208117?type=place&placename=barzok%20house">'
-    "اینجا</a>"
-)
- 
+HOUSE_RULES_SITE_URL = "https://arzokhouse.com/%D9%85%D8%B4%D8%A7%D9%87%D8%AF%D9%87-%D8%A7%D8%AA%D8%A7%D9%82-%D9%87%D8%A7"
+HOUSE_RULES_TIPS_URL = "https://barzokhouse.com/%d8%b4%d8%b1%d8%a7%db%8c%d8%b7-%d8%ae%d8%a7%d9%86%d9%87-%d9%88-%d9%88%d8%b1%d9%88%d8%af-%d9%85%d9%87%d9%85%d8%a7%d9%86/"
+
+WEATHER_TEXT = "🌤 <b>آب‌وهوا</b>\n\nپیش از حرکت، وضعیت آب‌وهوای برزک رو بررسی کنید."
+WEATHER_URL = "https://www.accuweather.com/en/ir/azaran/208117/weather-forecast/208117?type=place&placename=barzok%20house"
+
 GREEN_TRIP_TEXT = (
     "🌿 <b>سفر سبز به خانه برزک</b>\n\n"
-    "با چند کار ساده می‌توانیم در کنار هم به حفظ طبیعت زیبای برزک کمک کنیم.\n\n"
-    '<a href="https://barzokhouse.com/green-eco-lodge/">مشاهده در سایت</a>'
+    "با چند کار ساده می‌توانیم در کنار هم به حفظ طبیعت زیبای برزک کمک کنیم."
 )
+GREEN_TRIP_URL = "https://barzokhouse.com/green-eco-lodge/"
 # عکس مربوط به بخش «سفر سبز» - این عکس رو باید خودت اضافه کنی (پایین توضیح داده شده)
 GREEN_TRIP_PHOTO = "info_photos/green_trip.jpg"
 
@@ -120,10 +115,9 @@ GREEN_TRIP_PHOTO = "info_photos/green_trip.jpg"
 # ---------------------------------------------------------------------------
 FOOD_MENU_TEXT = (
     "🍽 <b>منوی غذا</b>\n\n"
-    "برای مشاهده‌ی خوراک‌ها و دستور پخت غذاهای اقامتگاه خانه برزک، "
-    '<a href="https://barzokhouse.com/%d8%af%d8%b3%d8%aa%d9%88%d8%b1-%d9%be%d8%ae%d8%aa-%d8%ba%d8%b0%d8%a7%d9%87%d8%a7/">اینجا</a> '
-    "رو ببینید."
+    "برای مشاهده‌ی خوراک‌ها و دستور پخت غذاهای اقامتگاه خانه برزک، روی دکمه‌ی زیر بزنید."
 )
+FOOD_MENU_URL = "https://barzokhouse.com/%d8%af%d8%b3%d8%aa%d9%88%d8%b1-%d9%be%d8%ae%d8%aa-%d8%ba%d8%b0%d8%a7%d9%87%d8%a7/"
 
 # ---------------------------------------------------------------------------
 # ثبت نظر / امتیاز دادن (این دکمه آخر لیست منو قرار می‌گیره)
@@ -134,11 +128,10 @@ REVIEW_TEXT = (
     "خوشحال می‌شویم چند خط درباره تجربه خود بنویسید. "
     "نظر شما هم برای ما ارزشمند است و هم به مسافران بعدی کمک می‌کند تا با اطمینان بیشتری خانه برزک "
     "را انتخاب کنند.\n\n"
-    '📍 <a href="https://maps.app.goo.gl/aC1vyJ9T5Q4jJkMy6">ثبت نظر در Google Maps</a>\n'
-    '✈️ <a href="https://www.tripadvisor.com/Hotel_Review-g680023-d8618364-Reviews-Barzok_House-Kashan_Isfahan_Province.html">'
-    "ثبت نظر در TripAdvisor</a>\n\n"
     "سپاسگزاریم که بخشی از داستان خانه برزک هستید. 🌿"
 )
+REVIEW_GOOGLE_MAPS_URL = "https://maps.app.goo.gl/aC1vyJ9T5Q4jJkMy6"
+REVIEW_TRIPADVISOR_URL = "https://www.tripadvisor.com/Hotel_Review-g680023-d8618364-Reviews-Barzok_House-Kashan_Isfahan_Province.html"
  
 # ---------------------------------------------------------------------------
 # لیست اتاق‌ها
