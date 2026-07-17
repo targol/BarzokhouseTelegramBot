@@ -206,6 +206,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
+async def cmd_address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(config.ADDRESS_TEXT)
+    await context.bot.send_location(
+        chat_id=update.effective_chat.id,
+        latitude=config.LOCATION_LATITUDE,
+        longitude=config.LOCATION_LONGITUDE,
+    )
+
+
+async def cmd_contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(config.CONTACT_TEXT)
+
+
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
         "درخواست رزرو لغو شد. هر وقت خواستی می‌تونی دوباره از /start شروع کنی.",
@@ -593,6 +606,8 @@ async def post_init(application: Application) -> None:
     await application.bot.set_my_commands(
         [
             BotCommand("start", "🏡 نمایش منوی اصلی"),
+            BotCommand("address", "📍 آدرس اقامتگاه"),
+            BotCommand("contact", "📞 تماس با ما"),
             BotCommand("cancel", "❌ لغو درخواست رزرو در حال انجام"),
         ]
     )
@@ -641,6 +656,8 @@ def main() -> None:
     )
 
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("address", cmd_address))
+    application.add_handler(CommandHandler("contact", cmd_contact))
     application.add_handler(booking_conv)
     application.add_handler(CallbackQueryHandler(menu_router))
     application.add_handler(CommandHandler("cancel", cancel_outside_conversation))
