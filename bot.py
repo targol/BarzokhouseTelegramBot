@@ -276,9 +276,22 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     data = query.data
 
     if data == "back_main":
-        await query.edit_message_text(
-            config.WELCOME_MESSAGE, reply_markup=main_menu_keyboard()
-        )
+        # اگه پیام فعلی عکس داشته باشه (مثل پیام بخش «سفر سبز»)، نمیشه با
+        # edit_message_text ویرایشش کرد؛ پس پیام قبلی رو حذف و پیام جدید می‌فرستیم.
+        if query.message.photo:
+            try:
+                await query.message.delete()
+            except Exception:
+                pass
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=config.WELCOME_MESSAGE,
+                reply_markup=main_menu_keyboard(),
+            )
+        else:
+            await query.edit_message_text(
+                config.WELCOME_MESSAGE, reply_markup=main_menu_keyboard()
+            )
         return
 
     if data == "menu_address":
