@@ -572,10 +572,15 @@ async def finalize_booking(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         "✅ درخواست رزرو شما با موفقیت ثبت و برای مدیریت اقامتگاه ارسال شد.\n"
         "به‌زودی برای هماهنگی نهایی و تایید رزرو با شما تماس گرفته می‌شود.\n\n"
         f"{config.CONTACT_TEXT}\n\n"
-        f"{config.ADDRESS_TEXT}\n\n"
-        "برای بازگشت به منوی اصلی /start رو بزنید.",
+        f"{config.ADDRESS_TEXT}",
         reply_markup=ReplyKeyboardRemove(),
     )
+    await context.bot.send_location(
+        chat_id=update.effective_chat.id,
+        latitude=config.LOCATION_LATITUDE,
+        longitude=config.LOCATION_LONGITUDE,
+    )
+    await update.message.reply_text("برای بازگشت به منوی اصلی /start رو بزنید.")
     context.user_data.clear()
 
 
